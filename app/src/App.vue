@@ -18,6 +18,7 @@
             Mining
           </div>
           <div class="card-body">
+            <p v-show="error" class="alert alert-danger">{{ error }}</p>
             <table class="table table-bordered">
               <tbody>
                 <tr>
@@ -36,14 +37,18 @@
                   <th>nonce</th>
                   <td><input type="text" v-model="nonce" class="form-control"></td>
                 </tr>
-                <tr>
-                  <td colspan="2">
-                    {{ previousHash + timestamp + data + nonce | hash }}
-                  </td>
-                </tr>
               </tbody>
             </table>
-            <p v-show="error" class="alert alert-danger">{{ error }}</p>
+            <p class="text-center">
+            ↓
+            </p>
+            <p class="text-center">
+              <span class="pr-3 pl-3 pt-2 pb-2 border border-dark rounded">sha256</span>
+            </p>
+            <p class="text-center">
+            ↓
+            </p>
+            <p class="alert alert-primary">{{ previousHash + timestamp + data + nonce | hash }}</p>
             <button v-on:click="pushBlock" class="btn btn-warning">Blockchainに追加</button>
           </div>
         </div>
