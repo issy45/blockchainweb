@@ -50,6 +50,7 @@
             </p>
             <p class="alert alert-primary">{{ previousHash + timestamp + data + nonce | hash }}</p>
             <button v-on:click="pushBlock" class="btn btn-warning">Blockchainに追加</button>
+            <button v-on:click="broadcast" class="btn btn-danger">Broadcast</button>
           </div>
         </div>
       </div>
@@ -66,6 +67,18 @@ import sha256 from 'crypto-js/sha256'
 
 export default {
   name: 'App',
+  sockets: {
+    connect: function () {
+    },
+    customEmit: function (newBlock) {
+      this.verifyBlock(newBlock)
+      if (this.error === '') {
+        this.$store.dispatch('blockchain/pushBlock', newBlock)
+        this.$store.dispatch('block/resetBlock')
+        this.error = 'だれかがマイニングに成功したのでブロックチェーンが更新されました。'
+      }
+    }
+  },
   data: function () {
     return {
       blocks: this.$store.state.blockchain.blocks,
@@ -83,25 +96,25 @@ export default {
       })
       this.$store.dispatch('block/resetBlock')
     },
-    verifyBlock: function () {
+    verifyBlock: function (newBlock) {
       const previousBlock = this.$store.getters['blockchain/latestBlock']
       if (previousBlock) {
         const previousHash = sha256(previousBlock.previousHash + previousBlock.timestamp + previousBlock.data + previousBlock.nonce).toString()
-        if (this.previousHash !== previousHash) {
+        if (newBlock.previousHash !== previousHash) {
           this.error = 'previousHashには前ブロックのハッシュ値を入れてください。'
           return
         }
 
-        if (!this.timestamp || !this.timestamp.match(/^\d+/)) {
+        if (!newBlock.timestamp || !newBlock.timestamp.match(/^\d+/)) {
           this.error = 'timestampは数値で入力してください。'
           return
-        } else if (this.timestamp <= previousBlock.timestamp) {
+        } else if (newBlock.timestamp <= previousBlock.timestamp) {
           this.error = 'timestampには前ブロックのtimestampより大きい値を入れてください。'
           return
         }
       }
 
-      const newHash = sha256(this.previousHash + this.timestamp + this.data + this.nonce).toString()
+      const newHash = sha256(newBlock.previousHash + newBlock.timestamp + newBlock.data + newBlock.nonce).toString()
       if (!newHash.match(/^0/)) {
         this.error = 'ハッシュ値の先頭１文字が「0」になるようにnonceを調整してください。'
         return
@@ -110,16 +123,20 @@ export default {
       this.error = ''
     },
     pushBlock: function () {
-      this.verifyBlock()
+      const newBlock = {
+        previousHash: this.previousHash,
+        timestamp: this.timestamp,
+        data: this.data,
+        nonce: this.nonce
+      }
+      this.verifyBlock(newBlock)
       if (this.error === '') {
-        this.$store.dispatch('blockchain/pushBlock', {
-          previousHash: this.previousHash,
-          timestamp: this.timestamp,
-          data: this.data,
-          nonce: this.nonce
-        })
+        this.$store.dispatch('blockchain/pushBlock', newBlock)
         this.$store.dispatch('block/resetBlock')
       }
+    },
+    broadcast: function () {
+      this.$socket.emit('broadcast', this.$store.getters['blockchain/latestBlock'])
     }
   },
   computed: {
