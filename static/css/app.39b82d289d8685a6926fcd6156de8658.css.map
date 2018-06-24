@@ -1,0 +1,1 @@
+{"version":3,"sources":["app.39b82d289d8685a6926fcd6156de8658.css"],"names":[],"mappings":"AACA,WACE,WAAY,AACZ,cAAgB,CACjB","file":"app.39b82d289d8685a6926fcd6156de8658.css","sourcesContent":["\n.container {\n  width: auto;\n  max-width: 100%;\n}\n"]}
