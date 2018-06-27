@@ -3,7 +3,7 @@ import App from './App'
 import store from '@/store.js'
 import VueSocketio from 'vue-socket.io'
 
-Vue.use(VueSocketio, 'http://blockchainweb.landau.jp/socket.io/')
+Vue.use(VueSocketio, 'http://blockchainweb.landau.jp/')
 
 Vue.config.productionTip = false
 
