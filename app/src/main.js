@@ -5,7 +5,7 @@ import BootstrapVue from 'bootstrap-vue'
 import VueSocketio from 'vue-socket.io'
 
 Vue.use(BootstrapVue)
-Vue.use(VueSocketio, 'http://localhost:3000')
+Vue.use(VueSocketio, 'http://blockchainweb.landau.jp/')
 
 Vue.config.productionTip = false
 
