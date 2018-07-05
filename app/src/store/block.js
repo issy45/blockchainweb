@@ -10,7 +10,7 @@ export default {
     generateGenesisBlock (state) {
       state.previousHash = '0000000000000000000000000000000000000000000000000000000000000000'
       state.timestamp = 1500000000
-      state.data = 'my genesis block!!'
+      state.data = 'Genesis Block'
       state.nonce = 8
     },
     changePreviousHash (state, newHash) {
