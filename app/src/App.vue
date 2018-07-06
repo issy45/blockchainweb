@@ -229,7 +229,6 @@ export default {
       return sha256(value).toString()
     },
     nodeName: function (value) {
-      console.log(value)
       return value.slice(0, 3)
     }
   }
