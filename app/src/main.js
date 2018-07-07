@@ -5,9 +5,9 @@ import BootstrapVue from 'bootstrap-vue'
 import VueSocketio from 'vue-socket.io'
 
 Vue.use(BootstrapVue)
-Vue.use(VueSocketio, 'http://blockchainweb.landau.jp/')
+Vue.use(VueSocketio, process.env.SOCKET_HOST)
 
-Vue.config.productionTip = false
+Vue.config.productionTip = process.env.NODE_ENV === 'production'
 
 new Vue({ // eslint-disable-line
   el: '#app',
