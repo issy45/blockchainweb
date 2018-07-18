@@ -4,7 +4,7 @@ io.on('connection', function (socket) {
 
   socket.emit('socketId', {socketId: socket.id})
 
-  socket.broadcast.emit('nodes', {nodes: [socket.id]})
+  socket.broadcast.emit('getNodes', {nodes: [socket.id]})
 
   socket.on('disconnect', function() {
     socket.broadcast.emit('disconnectNode', socket.id)
@@ -14,11 +14,11 @@ io.on('connection', function (socket) {
     const nodes = Object.keys(io.sockets.sockets).filter(function(v, i) {
       return (v !== socket.id)
     })
-    socket.emit('nodes', {nodes: nodes})
+    socket.emit('getNodes', {nodes: nodes})
   })
 
   socket.on('requestBlocks', function (data) {
-    socket.to(data.socketId).emit('sendBlocks', {socketId: socket.id, blockHeight: data.blockHeight})
+    socket.to(data.socketId).emit('sendBlocks', {socketId: socket.id, latestBlockHash: data.latestBlockHash})
   })
 
   socket.on('sendBlocks', function (data) {

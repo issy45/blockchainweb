@@ -1,3 +1,5 @@
+import sha256 from 'crypto-js/sha256'
+
 export default {
   namespaced: true,
   state: {
@@ -6,18 +8,23 @@ export default {
     data: null,
     nonce: null
   },
+  getters: {
+    blockHash (state) {
+      return sha256(state.previousHash + state.timestamp + state.data + state.nonce).toString()
+    }
+  },
   mutations: {
     generateGenesisBlock (state) {
       state.previousHash = '0000000000000000000000000000000000000000000000000000000000000000'
       state.timestamp = 1500000000
       state.data = 'Genesis Block'
-      state.nonce = 8
+      state.nonce = 12
     },
     changePreviousHash (state, newHash) {
       state.previousHash = newHash
     },
     changeTimestamp (state, newTimestamp) {
-      state.timestamp = newTimestamp
+      state.timestamp = parseInt(newTimestamp)
     },
     changeData (state, newData) {
       state.data = newData

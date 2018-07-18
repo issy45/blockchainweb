@@ -17,18 +17,18 @@
           <button v-on:click="broadcast" class="btn btn-danger">全ノードにブロックを送る</button>
         </div>
         <div>
-          <b-card v-for="(block, index) in blocks.slice().reverse()" :key="index" no-body class="mb-1">
+          <b-card v-for="(blockHash, index) in blockchain.slice().reverse()" :key="index" no-body class="mb-1">
             <b-card-header header-tag="header" class="p-1" role="tab">
-              <b-btn block href="#" v-b-toggle="'accordion' + index" variant="info" class="text-left">{{ block.timestamp }}: {{ block.data }}</b-btn>
+              <b-btn block href="#" v-b-toggle="'accordion' + index" variant="info" class="text-left">{{ blocks[blockHash].block.timestamp }}: {{ blocks[blockHash].block.data }}</b-btn>
             </b-card-header>
             <b-collapse :id="'accordion' + index" accordion="my-accordion" role="tabpanel">
               <b-card-body>
                 <p class="card-text">
-                  <b>hash:</b> {{ block.previousHash + block.timestamp + block.data + block.nonce | hash }}<br>
-                  <b>previousHash:</b> {{ block.previousHash }}<br>
-                  <b>timestamp:</b> {{ block.timestamp }}<br>
-                  <b>data:</b> {{ block.data }}<br>
-                  <b>nonce:</b> {{ block.nonce }}<br>
+                  <b>hash:</b> {{ blocks[blockHash].block.previousHash + blocks[blockHash].block.timestamp + blocks[blockHash].block.data + blocks[blockHash].block.nonce | hash }}<br>
+                  <b>previousHash:</b> {{ blocks[blockHash].block.previousHash }}<br>
+                  <b>timestamp:</b> {{ blocks[blockHash].block.timestamp }}<br>
+                  <b>data:</b> {{ blocks[blockHash].block.data }}<br>
+                  <b>nonce:</b> {{ blocks[blockHash].block.nonce }}<br>
                 </p>
               </b-card-body>
             </b-collapse>
@@ -92,8 +92,23 @@ export default {
       socketId: null,
       nodes: [],
       selectedNode: null,
-      blocks: this.$store.state.blockchain.blocks,
+      blocks: this.$store.state.blocks.blocks,
+      blockchain: this.$store.state.blocks.blockchain,
       error: ''
+    }
+  },
+  created: function () {
+    if (Object.keys(this.blocks).length === 0) {
+      this.$store.dispatch('block/generateGenesisBlock')
+      const blockHash = sha256(this.previousHash + this.timestamp + this.data + this.nonce).toString()
+      this.$store.dispatch('blocks/generateGenesisBLock', {
+        previousHash: this.previousHash,
+        timestamp: this.timestamp,
+        data: this.data,
+        nonce: this.nonce,
+        hash: blockHash
+      })
+      this.$store.dispatch('block/resetBlock')
     }
   },
   sockets: {
@@ -112,34 +127,33 @@ export default {
     socketId: function (data) {
       this.socketId = data.socketId
     },
-    nodes: function (data) {
+    getNodes: function (data) {
       this.nodes = Array.from(new Set(this.nodes.concat(data.nodes)))
     },
     sendBlocks: function (data) {
-      this.$socket.emit('sendBlocks', {socketId: data.socketId, blocks: this.blocks.slice(data.blockHeight)})
+      let blocks = []
+      for (var i = this.blockchain.length - 1; i >= 0; i--) {
+        if (this.blockchain[i] === data.latestBlockHash) {
+          break
+        }
+        blocks.unshift(this.blocks[this.blockchain[i]].block)
+      }
+
+      this.$socket.emit('sendBlocks', {socketId: data.socketId, blocks: blocks})
     },
     receiveBlocks: function (newBlocks) {
       for (const key of Object.keys(newBlocks)) {
         const block = newBlocks[key]
-        this.verifyBlock(block)
-        if (this.error === '') {
-          this.$store.dispatch('blockchain/pushBlock', block)
-          this.$store.dispatch('block/resetBlock')
-          this.error = 'だれかがマイニングに成功したのでブロックチェーンが更新されました。'
+        if (!block.timestamp || !String(block.timestamp).match(/^\d+/)) {
+          return
         }
+        const hash = sha256(block.previousHash + block.timestamp + block.data + block.nonce).toString()
+        if (!hash.match(/^0/)) {
+          return
+        }
+        block.hash = hash
+        this.$store.dispatch('blocks/addBlock', block)
       }
-    }
-  },
-  created: function () {
-    if (this.blocks.length === 0) {
-      this.$store.dispatch('block/generateGenesisBlock')
-      this.$store.dispatch('blockchain/pushBlock', {
-        previousHash: this.previousHash,
-        timestamp: this.timestamp,
-        data: this.data,
-        nonce: this.nonce
-      })
-      this.$store.dispatch('block/resetBlock')
     }
   },
   methods: {
@@ -151,20 +165,10 @@ export default {
       this.selectedNode = node
     },
     requestBlocks: function () {
-      this.$socket.emit('requestBlocks', {socketId: this.selectedNode, blockHeight: this.blocks.length})
+      this.$socket.emit('requestBlocks', {socketId: this.selectedNode, latestBlockHash: this.$store.getters['blocks/bestBlockHash']})
     },
-    startBlockchain: function () {
-      this.$store.dispatch('block/generateGenesisBlock')
-      this.$store.dispatch('blockchain/pushBlock', {
-        previousHash: this.previousHash,
-        timestamp: this.timestamp,
-        data: this.data,
-        nonce: this.nonce
-      })
-      this.$store.dispatch('block/resetBlock')
-    },
-    verifyBlock: function (newBlock) {
-      const previousBlock = this.$store.getters['blockchain/latestBlock']
+    verifyMiningBlock: function (newBlock) {
+      const previousBlock = this.blocks[this.blockchain.bestBlockHash]
       if (previousBlock) {
         const previousHash = sha256(previousBlock.previousHash + previousBlock.timestamp + previousBlock.data + previousBlock.nonce).toString()
         if (newBlock.previousHash !== previousHash) {
@@ -194,16 +198,20 @@ export default {
         previousHash: this.previousHash,
         timestamp: this.timestamp,
         data: this.data,
-        nonce: this.nonce
+        nonce: this.nonce,
+        hash: this.$store.getters['block/blockHash']
       }
-      this.verifyBlock(newBlock)
+      this.verifyMiningBlock(newBlock)
       if (this.error === '') {
-        this.$store.dispatch('blockchain/pushBlock', newBlock)
+        this.$store.dispatch('blocks/addBlock', newBlock)
         this.$store.dispatch('block/resetBlock')
       }
     },
+    broadcastBlockHeight: function () {
+      this.$socket.emit('broadcastBlockHeight', this.blocks.length)
+    },
     broadcast: function () {
-      this.$socket.emit('broadcast', this.$store.getters['blockchain/latestBlock'])
+      this.$socket.emit('broadcast', this.blocks[this.$store.getters['blocks/bestBlockHash']].block)
     }
   },
   computed: {

@@ -2,14 +2,14 @@ import 'babel-polyfill'
 import Vuex from 'vuex'
 import Vue from 'vue'
 import block from '@/store/block.js'
-import blockchain from '@/store/blockchain.js'
+import blocks from '@/store/blocks.js'
 
 Vue.use(Vuex)
 
 const store = new Vuex.Store({
   modules: {
     block,
-    blockchain
+    blocks
   }
 })
 
